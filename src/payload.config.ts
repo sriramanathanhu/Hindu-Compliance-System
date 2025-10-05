@@ -22,8 +22,6 @@ export default buildConfig({
     user: 'users',
     meta: {
       titleSuffix: '- KAILASA Hindu Compliance System',
-      favicon: '/favicon.ico',
-      ogImage: '/og-image.jpg',
     },
   },
 

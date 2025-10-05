@@ -496,12 +496,14 @@ export const Complaints: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, req, operation, previousDoc, context }) => {
+      async ({ doc, req, operation, previousDoc }) => {
         if (
           operation === 'create' ||
           (doc.status !== previousDoc?.status && doc.visibleToPublic)
         ) {
-          const payload = context.payload || req.payload
+          const { payload } = req
+
+          if (!payload) return
 
           // Get all visible complaints for this business
           const complaints = await payload.find({

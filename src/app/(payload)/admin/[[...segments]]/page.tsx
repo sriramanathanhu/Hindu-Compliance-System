@@ -1,9 +1,11 @@
-import { generatePageMetadata } from '@payloadcms/next/utilities'
-import { RootPage, generateMetadata } from '@payloadcms/next/views'
+import { RootPage } from '@payloadcms/next/views'
 import config from '@payload-config'
-import React from 'react'
+import type { Metadata } from 'next'
 
-export { generateMetadata }
+export const generateMetadata = (): Metadata => ({
+  title: 'KAILASA Hindu Compliance System',
+  description: 'Admin Panel',
+})
 
 const Page = (props: any) => <RootPage config={config} {...props} />
 

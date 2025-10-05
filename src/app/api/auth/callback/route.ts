@@ -111,9 +111,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies()
 
     // Set Payload auth cookie
-    cookieStore.set({
-      name: 'payload-token',
-      value: token.token,
+    cookieStore.set('payload-token', token.token || '', {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
@@ -122,9 +120,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Also store KAILASA session token for future reference
-    cookieStore.set({
-      name: 'kailasa_session_token',
-      value: data.session_token,
+    cookieStore.set('kailasa_session_token', data.session_token || '', {
       httpOnly: true,
       sameSite: 'strict',
       path: '/',

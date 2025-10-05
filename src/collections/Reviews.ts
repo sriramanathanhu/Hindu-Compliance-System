@@ -15,9 +15,9 @@ export const Reviews: CollectionConfig = {
         return {
           or: [
             { status: { equals: 'approved' } },
-            { user: { equals: user.id } },
+            { user: { equals: user.id as string | number } },
           ],
-        }
+        } as any
       }
       return {
         status: { equals: 'approved' },
@@ -177,10 +177,12 @@ export const Reviews: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, req, operation, previousDoc, context }) => {
+      async ({ doc, req, operation, previousDoc }) => {
         // Update business rating when review is approved
         if (doc.status === 'approved' && previousDoc?.status !== 'approved') {
-          const payload = context.payload || req.payload
+          const { payload } = req
+
+          if (!payload) return
 
           // Get all approved reviews for this business
           const reviews = await payload.find({
