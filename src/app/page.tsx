@@ -1,9 +1,10 @@
 import Link from 'next/link'
+import './globals.css'
 
 export default function Home() {
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1>KAILASA Hindu Compliance System</h1>
+      <h1>Hindu Compliance System</h1>
       <p style={{ margin: '1rem 0' }}>
         Welcome to the Hindu Compliance System - A comprehensive platform for business listings, reviews, and complaints.
       </p>
@@ -13,13 +14,6 @@ export default function Home() {
         <ul style={{ marginTop: '1rem' }}>
           <li style={{ margin: '0.5rem 0' }}>
             <Link href="/admin">Admin Dashboard</Link>
-          </li>
-          <li style={{ margin: '0.5rem 0' }}>
-            <a
-              href={`${process.env.NEXT_AUTH_URL}/auth/sign-in/google?client_id=${process.env.NEXT_AUTH_CLIENT_ID}&redirect_uri=${process.env.NEXT_BASE_URL}/api/auth/callback`}
-            >
-              Sign in with KAILASA SSO
-            </a>
           </li>
         </ul>
       </div>
@@ -31,7 +25,6 @@ export default function Home() {
           <li>Customer Reviews & Ratings</li>
           <li>Complaint Management System</li>
           <li>Quote Request Forms</li>
-          <li>KAILASA SSO Integration</li>
         </ul>
       </div>
     </div>

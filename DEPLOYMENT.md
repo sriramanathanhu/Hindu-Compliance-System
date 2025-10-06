@@ -6,15 +6,15 @@
    - Create a PostgreSQL database for the application
    - Note the connection string
 
-2. **KAILASA SSO Credentials**
-   - Obtain `NEXT_AUTH_CLIENT_ID` from KAILASA admin
-   - Obtain `AUTH_CLIENT_SECRET` from KAILASA admin
-   - Register callback URL: `https://hcs-dev.ecitizen.media/api/auth/callback`
-
-3. **Domain Configuration**
+2. **Domain Configuration**
    - Domain: `hcs-dev.ecitizen.media`
-   - SSL certificate configured
+   - SSL certificate configured (Caddy handles automatically with Let's Encrypt)
    - DNS pointing to server
+
+3. **Server Requirements**
+   - Node.js 18+
+   - PostgreSQL 15+
+   - Caddy web server (for reverse proxy and automatic HTTPS)
 
 ## Environment Variables
 
@@ -24,15 +24,12 @@ Create `.env` file with the following (see `.env.example`):
 # Database - Update with actual credentials
 DATABASE_URI=postgresql://username:password@host:5432/hindu_compliance
 
-# Payload - Generate secure secret
+# Payload CMS - Generate secure secret
 PAYLOAD_SECRET=$(openssl rand -base64 32)
 PAYLOAD_PUBLIC_SERVER_URL=https://hcs-dev.ecitizen.media
 
-# KAILASA SSO - Obtain from KAILASA admin
-NEXT_AUTH_URL=https://auth.kailasa.ai
-NEXT_AUTH_CLIENT_ID=your_actual_client_id
-AUTH_CLIENT_SECRET=your_actual_client_secret
-NEXT_BASE_URL=https://hcs-dev.ecitizen.media
+# Application Configuration
+PORT=3001
 
 # Environment
 NODE_ENV=production
@@ -97,46 +94,41 @@ pm2 save
 pm2 startup
 ```
 
-### 8. Configure Reverse Proxy (Nginx)
+### 8. Configure Reverse Proxy (Caddy)
 
-Example Nginx configuration:
+Create or update `/etc/caddy/Caddyfile`:
 
-```nginx
-server {
-    listen 80;
-    server_name hcs-dev.ecitizen.media;
-    return 301 https://$server_name$request_uri;
-}
+```caddyfile
+hcs-dev.ecitizen.media {
+    reverse_proxy localhost:3001
 
-server {
-    listen 443 ssl http2;
-    server_name hcs-dev.ecitizen.media;
+    encode gzip
 
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
+    log {
+        output file /var/log/caddy/hcs-dev.log
     }
 }
 ```
 
+Reload Caddy configuration:
+
+```bash
+sudo systemctl reload caddy
+```
+
+**Note**: Caddy automatically handles:
+- HTTP to HTTPS redirect
+- Let's Encrypt SSL certificate provisioning and renewal
+- HTTP/2 support
+
 ## Post-Deployment
 
-### 1. Test SSO Authentication
+### 1. Test Authentication
 
-1. Go to homepage: `https://hcs-dev.ecitizen.media`
-2. Click "Sign in with KAILASA SSO"
-3. Authenticate with Google via auth.kailasa.ai
-4. Verify redirect back to admin panel
+1. Navigate to admin panel: `https://hcs-dev.ecitizen.media/admin`
+2. Login with admin credentials (email/password)
+3. Verify access to admin dashboard
+4. Test creating a new user account
 
 ### 2. Create Initial Data
 

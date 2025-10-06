@@ -17,11 +17,11 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 export default buildConfig({
-  serverURL: process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
+  serverURL: process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3001',
   admin: {
     user: 'users',
     meta: {
-      titleSuffix: '- KAILASA Hindu Compliance System',
+      titleSuffix: '- Hindu Compliance System',
     },
   },
 
@@ -82,13 +82,11 @@ export default buildConfig({
 
   // CORS configuration
   cors: [
-    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
-    process.env.NEXT_BASE_URL || 'http://localhost:3000',
+    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3001',
   ].filter(Boolean),
 
   // CSRF protection
   csrf: [
-    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
-    process.env.NEXT_BASE_URL || 'http://localhost:3000',
+    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3001',
   ].filter(Boolean),
 })

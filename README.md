@@ -1,6 +1,6 @@
-# KAILASA Hindu Compliance System
+# Hindu Compliance System
 
-A comprehensive business compliance platform with BBB-style business listings, customer reviews, complaints management, and KAILASA SSO integration.
+A comprehensive business compliance platform with BBB-style business listings, customer reviews, complaints management, and user authentication.
 
 ## Features
 
@@ -8,7 +8,7 @@ A comprehensive business compliance platform with BBB-style business listings, c
 - **Reviews System**: Customer reviews with moderation and rating calculations
 - **Complaints Management**: BBB-style complaint filing and tracking
 - **Quote Requests**: Dynamic form builder for quote requests
-- **KAILASA SSO**: Integrated authentication with auth.kailasa.ai
+- **User Authentication**: Secure email/password authentication via Payload CMS
 - **PostgreSQL Database**: Robust data storage
 - **Admin Dashboard**: Full-featured Payload CMS admin panel
 
@@ -17,7 +17,7 @@ A comprehensive business compliance platform with BBB-style business listings, c
 - **Framework**: Next.js 15+ with App Router
 - **CMS**: Payload CMS 3.x
 - **Database**: PostgreSQL
-- **Authentication**: KAILASA SSO (Google OAuth)
+- **Authentication**: Payload CMS built-in authentication (email/password)
 - **Language**: TypeScript
 - **Rich Text**: Lexical Editor
 
@@ -25,7 +25,6 @@ A comprehensive business compliance platform with BBB-style business listings, c
 
 - Node.js 18+
 - PostgreSQL database
-- KAILASA SSO credentials (client_id and client_secret)
 
 ## Installation
 
@@ -54,16 +53,13 @@ A comprehensive business compliance platform with BBB-style business listings, c
 
    # Payload
    PAYLOAD_SECRET=your-secure-random-secret-key
-   PAYLOAD_PUBLIC_SERVER_URL=https://hcs-dev.ecitizen.media
+   PAYLOAD_PUBLIC_SERVER_URL=http://localhost:3001
 
-   # KAILASA SSO
-   NEXT_AUTH_URL=https://auth.kailasa.ai
-   NEXT_AUTH_CLIENT_ID=your_client_id
-   AUTH_CLIENT_SECRET=your_client_secret
-   NEXT_BASE_URL=https://hcs-dev.ecitizen.media
+   # Application
+   PORT=3001
 
    # Environment
-   NODE_ENV=production
+   NODE_ENV=development
    ```
 
 4. **Create PostgreSQL database**
@@ -84,11 +80,11 @@ Run the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
-- **Admin Panel**: http://localhost:3000/admin
-- **API**: http://localhost:3000/api
-- **GraphQL**: http://localhost:3000/api/graphql
+- **Admin Panel**: http://localhost:3001/admin
+- **API**: http://localhost:3001/api
+- **GraphQL**: http://localhost:3001/api/graphql
 
 ## Production Build
 
@@ -99,20 +95,30 @@ npm start
 
 ## Authentication Flow
 
-1. Users click "Sign in with KAILASA SSO"
-2. Redirected to auth.kailasa.ai for Google OAuth
-3. After successful authentication, redirected to `/api/auth/callback`
-4. Callback handler exchanges auth code for session token
-5. User is created/updated in Payload CMS
-6. Payload JWT token is generated and set as cookie
-7. User is redirected to admin dashboard
+1. User navigates to `/admin`
+2. Payload CMS login form is displayed
+3. User submits email and password via `/api/users/login`
+4. Payload validates credentials against Users collection (bcrypt hash)
+5. On success, Payload generates JWT token (using PAYLOAD_SECRET)
+6. JWT stored in httpOnly cookie: `payload-token`
+7. Cookie settings: `secure=true` (HTTPS only), `sameSite=strict`, `maxAge=7200s` (2 hours)
+8. Subsequent requests include cookie automatically
+9. Payload middleware validates JWT on each API request
+10. User object populated in `req.user` for access control
+
+### Session Management
+
+- **Session timeout**: 2 hours (tokenExpiration: 7200)
+- **Failed login attempts**: Maximum 5 attempts before account lockout
+- **Account lockout**: 10 minutes after 5 failed attempts
+- **Password reset**: Available through Payload admin panel
 
 ## Collections
 
 ### Users
 - Authentication and user management
-- SSO integration fields
-- Role-based access control
+- Role-based access control (admin, editor, business_owner, user)
+- Account status management
 
 ### Businesses
 - Complete business profiles
@@ -161,12 +167,14 @@ npm start
 
 ### GraphQL
 
-GraphQL Playground: `http://localhost:3000/api/graphql`
+GraphQL Playground: `http://localhost:3001/api/graphql`
 
-### Authentication
+### Authentication Endpoints
 
-- **SSO Callback**: `/api/auth/callback`
-- **Session Check**: `/api/auth/session`
+- **Login**: `POST /api/users/login`
+- **Logout**: `POST /api/users/logout`
+- **Current User**: `GET /api/users/me`
+- **Password Reset**: `POST /api/users/forgot-password`
 
 ## Deployment
 
@@ -177,10 +185,11 @@ The application is configured to deploy to:
 ### Environment Setup
 
 Ensure all production environment variables are set:
-- Database connection string
-- PAYLOAD_SECRET (generate with: `openssl rand -base64 32`)
-- KAILASA SSO credentials
-- Correct domain URLs
+- `DATABASE_URI`: PostgreSQL connection string
+- `PAYLOAD_SECRET`: Secure random key (generate with: `openssl rand -base64 32`)
+- `PAYLOAD_PUBLIC_SERVER_URL`: Production domain (e.g., https://hcs-dev.ecitizen.media)
+- `PORT`: Application port (default: 3001)
+- `NODE_ENV`: Set to `production`
 
 ### Database Migration
 
@@ -194,7 +203,8 @@ hindu-compliance-system/
 │   ├── app/                    # Next.js App Router
 │   │   ├── (payload)/         # Payload admin routes
 │   │   ├── api/               # API routes
-│   │   │   └── auth/          # SSO authentication
+│   │   │   ├── [[...slug]]/   # Payload REST API
+│   │   │   └── health/        # Health check endpoint
 │   │   ├── layout.tsx         # Root layout
 │   │   ├── page.tsx           # Home page
 │   │   └── globals.css        # Global styles
@@ -244,7 +254,7 @@ hindu-compliance-system/
 
 For issues or questions:
 - GitHub Issues: https://github.com/sriramanathanhu/Hindu-Compliance-System/issues
-- KAILASA SSO Docs: https://auth.kailasa.ai/docs
+- Payload CMS Docs: https://payloadcms.com/docs
 
 ## License
 

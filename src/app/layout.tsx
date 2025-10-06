@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'KAILASA Hindu Compliance System',
+  title: 'Hindu Compliance System',
   description: 'Hindu Compliance System for business listings, reviews, and complaints',
 }
 

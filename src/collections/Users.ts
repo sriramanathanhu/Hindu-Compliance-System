@@ -4,7 +4,7 @@ export const Users: CollectionConfig = {
   slug: 'users',
   auth: {
     tokenExpiration: 7200, // 2 hours
-    verify: false, // Disable email verification for SSO users
+    verify: false,
     maxLoginAttempts: 5,
     lockTime: 600000, // 10 minutes
   },
@@ -88,40 +88,6 @@ export const Users: CollectionConfig = {
       required: true,
       access: {
         update: ({ req: { user } }) => user?.role === 'admin',
-      },
-    },
-    // SSO-specific fields
-    {
-      name: 'ssoProvider',
-      type: 'select',
-      options: [
-        { label: 'Local', value: 'local' },
-        { label: 'KAILASA SSO', value: 'kailasa_sso' },
-      ],
-      defaultValue: 'local',
-      admin: {
-        readOnly: true,
-        description: 'Authentication provider used',
-        position: 'sidebar',
-      },
-    },
-    {
-      name: 'ssoId',
-      type: 'text',
-      unique: true,
-      admin: {
-        readOnly: true,
-        description: 'External SSO identifier',
-        position: 'sidebar',
-      },
-      index: true,
-    },
-    {
-      name: 'ssoData',
-      type: 'json',
-      admin: {
-        readOnly: true,
-        description: 'Additional data from SSO provider',
       },
     },
     {
