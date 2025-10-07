@@ -1,0 +1,495 @@
+openapi: 3.1.0
+info:
+  title: Nandi Authentication API
+  description: OAuth 2.0 Authentication Service
+  license:
+    name: ""
+  version: 0.1.0
+servers:
+  - url: http://localhost:8091
+    description: Local development server
+  - url: https://auth.kailasa.ai
+    description: Production server
+paths:
+  /:
+    get:
+      tags:
+        - General
+      summary: Hello World endpoint
+      description: Returns a simple greeting message
+      operationId: 01_hello_world
+      responses:
+        "200":
+          description: Greeting message
+          content:
+            text/plain:
+              schema:
+                type: string
+  /health:
+    get:
+      tags:
+        - General
+      summary: Health check endpoint
+      description: Returns the service health status and version
+      operationId: 02_health_check
+      responses:
+        "200":
+          description: Service health information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /auth/get-session:
+    get:
+      tags:
+        - Auth
+      summary: Get session information
+      description: Validates the session cookie and returns session details with user
+        information
+      operationId: 30_get_session
+      parameters:
+        - name: client_id
+          in: query
+          description: Unique identifier for the OAuth client
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Unauthorized - no session or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+      security:
+        - cookieAuth: []
+  /auth/sign-in:
+    get:
+      tags:
+        - Auth
+      summary: Get signin page or redirect if already authenticated
+      description: Displays the signin page for client authentication. If user already
+        has a valid session cookie, generates an auth code and redirects to
+        success page.
+      operationId: signin_page
+      parameters:
+        - name: client_id
+          in: query
+          description: Unique identifier for the OAuth client
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          description: URL to redirect after successful authentication
+          required: true
+          schema:
+            type: string
+        - name: error_callback_url
+          in: query
+          description: URL to redirect in case of authentication error
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Login page returned successfully
+          content:
+            text/html: {}
+        "302":
+          description: Redirect to success page with auth code (if already authenticated)
+        "400":
+          description: Invalid or missing client_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "500":
+          description: Database connection failure or auth code generation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+      security:
+        - cookieAuth: []
+  /auth/sign-in/email:
+    post:
+      tags:
+        - Auth
+      summary: Sign In with email
+      description: Authenticates a user with email and password
+      operationId: signin_with_email
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailLoginRequest"
+        required: true
+      responses:
+        "302":
+          description: Redirect to success page
+        "400":
+          description: Invalid credentials
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+  /auth/signup/email:
+    post:
+      tags:
+        - Auth
+      summary: Sign up with email
+      description: Creates a new user account with email and password
+      operationId: 12_signup_with_email
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmailAccountPayload"
+        required: true
+      responses:
+        "302":
+          description: Redirect to success page
+        "400":
+          description: User already exists or invalid data
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+  /auth/sign-in/google:
+    get:
+      tags:
+        - Auth
+      summary: Initiate Google OAuth login
+      description: Redirects to Google OAuth authorization URL
+      operationId: 20_google_login
+      parameters:
+        - name: client_id
+          in: query
+          description: Unique identifier for the OAuth client
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          description: URL to redirect after successful authentication
+          required: true
+          schema:
+            type: string
+        - name: error_callback_url
+          in: query
+          description: URL to redirect in case of authentication error
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to Google OAuth
+        "400":
+          description: Invalid client_id
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+  /auth/google/callback:
+    get:
+      tags:
+        - Auth
+      summary: Handle Google OAuth callback
+      description: Processes the OAuth callback from Google and creates a session
+      operationId: 21_google_callback
+      parameters:
+        - name: code
+          in: query
+          description: Authorization code from Google
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: State parameter for CSRF protection
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to success page with session
+        "400":
+          description: Invalid or expired state
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+  /auth/session/token:
+    post:
+      tags:
+        - Auth
+      summary: Exchange authorization code for session token
+      description: Exchanges a one-time authorization code for a session token
+      operationId: 31_exchange_token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+        required: true
+      responses:
+        "200":
+          description: Token exchange successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: Invalid request or expired code
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          description: Invalid client credentials
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+  /auth/success:
+    get:
+      tags:
+        - Auth
+      summary: Success callback
+      description: Sets session cookie and redirects to client application
+      operationId: 40_success_callback
+      parameters:
+        - name: redirect_uri
+          in: query
+          description: URL to redirect to
+          required: true
+          schema:
+            type: string
+        - name: session_token
+          in: query
+          description: Session token
+          required: true
+          schema:
+            type: string
+        - name: auth_code
+          in: query
+          description: Authorization code
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to client application with session cookie
+  /auth/error:
+    get:
+      tags:
+        - Auth
+      summary: Error callback
+      description: Returns an authentication error response
+      operationId: 41_error_callback
+      responses:
+        "500":
+          description: Authentication error occurred
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+components:
+  schemas:
+    AuthRequest:
+      type: object
+      required:
+        - code
+        - state
+      properties:
+        code:
+          type: string
+        state:
+          type: string
+    CreateEmailAccountPayload:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        password:
+          type: string
+    EmailLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    HealthResponse:
+      type: object
+      description: Health check response
+      required:
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          description: Service status
+        version:
+          type: string
+          description: Service version
+    Message:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    OAuthLoginParams:
+      type: object
+      required:
+        - client_id
+        - redirect_uri
+      properties:
+        client_id:
+          type: string
+        error_callback_url:
+          type:
+            - string
+            - "null"
+        redirect_uri:
+          type: string
+    SessionInfo:
+      type: object
+      required:
+        - token
+        - expires_at
+      properties:
+        expires_at:
+          type: integer
+          format: int64
+        token:
+          type: string
+    SessionParams:
+      type: object
+      required:
+        - client_id
+      properties:
+        client_id:
+          type: string
+    SessionResponse:
+      type: object
+      properties:
+        session:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/SessionInfo"
+        user:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/SessionUser"
+    SessionUser:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - is_anonymous
+      properties:
+        email:
+          type: string
+        id:
+          type: string
+        image:
+          type:
+            - string
+            - "null"
+        is_anonymous:
+          type: boolean
+        name:
+          type: string
+    SuccessParams:
+      type: object
+      required:
+        - redirect_uri
+        - auth_code
+      properties:
+        auth_code:
+          type: string
+        redirect_uri:
+          type: string
+    TokenRequest:
+      type: object
+      required:
+        - code
+        - client_id
+        - client_secret
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        code:
+          type: string
+    TokenResponse:
+      type: object
+      required:
+        - session_token
+        - expires_at
+      properties:
+        expires_at:
+          type: integer
+          format: int64
+        session_token:
+          type: string
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: nandi_session
+tags:
+  - name: General
+    description: General endpoints
+  - name: Auth
+    description: Authentication endpoints
