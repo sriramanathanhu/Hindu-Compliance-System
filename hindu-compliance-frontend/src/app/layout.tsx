@@ -30,6 +30,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className="font-sans antialiased">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-primary-600 focus:text-white">
+          Skip to main content
+        </a>
         <ReactQueryProvider>{children}</ReactQueryProvider>
       </body>
     </html>

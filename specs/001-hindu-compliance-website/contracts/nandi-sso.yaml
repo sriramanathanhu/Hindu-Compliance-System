@@ -1,0 +1,291 @@
+# Nandi SSO OAuth 2.0 API Contract
+# Phase 1: Homepage + Authentication Flow
+
+# REFERENCE: This contract is based on /root/hinducs/nandi-authentication-api.yaml
+# Full API specification available at: https://auth.kailasa.ai/docs
+
+openapi: 3.1.0
+info:
+  title: Nandi SSO - Hindu Compliance Website Integration
+  description: OAuth 2.0 Authentication Service integration for Phase 1
+  version: 1.0.0
+servers:
+  - url: https://auth.kailasa.ai
+    description: Production Nandi SSO server
+  - url: http://localhost:8091
+    description: Local development (if available)
+
+paths:
+  /auth/sign-in:
+    get:
+      summary: Initiate OAuth 2.0 authorization flow
+      description: Redirects user to Nandi SSO login page. If already authenticated, generates auth code and redirects to success page.
+      operationId: initiateSignIn
+      parameters:
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth client ID for Hindu Compliance Website
+          example: "hindu-compliance-web"
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Callback URL after successful authentication
+          example: "https://compliance.example.com/api/auth/callback"
+        - name: error_callback_url
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: URL to redirect on authentication error
+      responses:
+        '302':
+          description: Redirect to Nandi login page or callback with auth code
+        '400':
+          description: Invalid client_id or redirect_uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/token:
+    post:
+      summary: Exchange authorization code for access token
+      description: OAuth 2.0 token endpoint for authorization code grant
+      operationId: exchangeToken
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+                - code
+                - client_id
+                - client_secret
+                - redirect_uri
+              properties:
+                grant_type:
+                  type: string
+                  enum: [authorization_code, refresh_token]
+                  description: OAuth grant type
+                code:
+                  type: string
+                  description: Authorization code from sign-in redirect (required for authorization_code grant)
+                refresh_token:
+                  type: string
+                  description: Refresh token (required for refresh_token grant)
+                client_id:
+                  type: string
+                  description: OAuth client ID
+                client_secret:
+                  type: string
+                  description: OAuth client secret
+                redirect_uri:
+                  type: string
+                  format: uri
+                  description: Must match redirect_uri from sign-in request
+      responses:
+        '200':
+          description: Successful token exchange
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid request or expired code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid client credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/get-session:
+    get:
+      summary: Validate session and get user information
+      description: Validates session cookie and returns user details
+      operationId: getSession
+      parameters:
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth client ID
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Valid session with user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      summary: End user session
+      description: Invalidates the current session and clears cookies
+      operationId: logout
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        '401':
+          description: No active session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Session cookie set by Nandi SSO
+
+  schemas:
+    TokenResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          description: OAuth 2.0 access token (JWT)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refresh_token:
+          type: string
+          description: Refresh token for obtaining new access tokens
+          example: "refresh_abc123xyz..."
+        token_type:
+          type: string
+          enum: [Bearer]
+          description: Token type (always Bearer)
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+        scope:
+          type: string
+          description: Granted OAuth scopes
+          example: "read write"
+
+    SessionResponse:
+      type: object
+      required:
+        - user
+        - client_id
+      properties:
+        user:
+          type: object
+          required:
+            - id
+            - email
+          properties:
+            id:
+              type: string
+              description: Unique user identifier from Nandi
+              example: "usr_1234567890"
+            email:
+              type: string
+              format: email
+              description: User email address
+              example: "admin@temple.org"
+            name:
+              type: string
+              description: Full name (if provided during registration)
+              example: "Temple Administrator"
+            profile_image:
+              type: string
+              format: uri
+              description: Avatar image URL (if provided)
+              example: "https://auth.kailasa.ai/avatars/usr_1234567890.jpg"
+        client_id:
+          type: string
+          description: OAuth client ID
+          example: "hindu-compliance-web"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "invalid_grant"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The provided authorization code is invalid or expired"
+        error_description:
+          type: string
+          description: Additional error details
+          example: "Code has already been used or does not exist"
+
+# Implementation Notes for Frontend Integration:
+
+# 1. Sign-In Flow:
+#    GET /auth/sign-in?client_id={ID}&redirect_uri={CALLBACK_URL}
+#    → User authenticates on Nandi
+#    → Redirects to: {CALLBACK_URL}?code={AUTH_CODE}
+
+# 2. Token Exchange (Backend):
+#    POST /auth/token
+#    Body: grant_type=authorization_code&code={AUTH_CODE}&client_id={ID}&client_secret={SECRET}&redirect_uri={CALLBACK_URL}
+#    → Receive access_token and refresh_token
+#    → Store tokens in httpOnly cookies
+
+# 3. Session Validation:
+#    GET /auth/get-session?client_id={ID}
+#    Cookie: session={ACCESS_TOKEN}
+#    → Receive user information
+
+# 4. Token Refresh (when access_token expires):
+#    POST /auth/token
+#    Body: grant_type=refresh_token&refresh_token={REFRESH_TOKEN}&client_id={ID}&client_secret={SECRET}
+#    → Receive new access_token
+
+# 5. Logout:
+#    POST /auth/logout
+#    → Clear session cookies
+#    → Redirect to homepage
+
+# Environment Variables Required:
+# - NANDI_SSO_CLIENT_ID: OAuth client ID (from Nandi registration)
+# - NANDI_SSO_CLIENT_SECRET: OAuth client secret (from Nandi registration)
+# - NANDI_SSO_REDIRECT_URI: Callback URL (e.g., https://compliance.example.com/api/auth/callback)
+# - NANDI_SSO_AUTH_URL: Base URL (https://auth.kailasa.ai)

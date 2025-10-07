@@ -1,0 +1,588 @@
+# Payload CMS API Contract
+# Phase 1: Homepage Content Management
+
+openapi: 3.1.0
+info:
+  title: Payload CMS - Hindu Compliance Website Content API
+  description: REST API for content management (Phase 1 - Homepage + Auth)
+  version: 1.0.0
+servers:
+  - url: ${PAYLOAD_API_URL}/api
+    description: Payload CMS API base URL (configured via environment)
+    variables:
+      PAYLOAD_API_URL:
+        default: http://localhost:3000
+
+paths:
+  /pages/homepage:
+    get:
+      summary: Get homepage content
+      description: Retrieve all homepage sections and content
+      operationId: getHomepage
+      parameters:
+        - name: draft
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include draft content (requires authentication)
+      responses:
+        '200':
+          description: Homepage content successfully retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomepageContent'
+        '404':
+          description: Homepage not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - {} # Public endpoint
+        - BearerAuth: [] # Optional for draft content
+
+  /navigation/{slug}:
+    get:
+      summary: Get navigation menu by slug
+      description: Retrieve navigation menu items (main-menu, footer-menu)
+      operationId: getNavigation
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [main-menu, footer-menu]
+          description: Navigation menu identifier
+      responses:
+        '200':
+          description: Navigation menu successfully retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationMenu'
+        '404':
+          description: Navigation menu not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /globals/site-settings:
+    get:
+      summary: Get site-wide settings
+      description: Retrieve global site configuration
+      operationId: getSiteSettings
+      responses:
+        '200':
+          description: Site settings successfully retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettings'
+
+  /media:
+    get:
+      summary: List media files
+      description: Get list of uploaded media (images, documents)
+      operationId: listMedia
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+          description: Number of items per page
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: where
+          in: query
+          schema:
+            type: object
+          description: Query filters (JSON object)
+      responses:
+        '200':
+          description: Media list successfully retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  docs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+                  totalDocs:
+                    type: integer
+                  limit:
+                    type: integer
+                  page:
+                    type: integer
+                  totalPages:
+                    type: integer
+
+  /media/{id}:
+    get:
+      summary: Get media file by ID
+      description: Retrieve specific media file metadata
+      operationId: getMediaById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Media file ID
+      responses:
+        '200':
+          description: Media file successfully retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+        '404':
+          description: Media file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Payload CMS API key or JWT token
+
+  schemas:
+    HomepageContent:
+      type: object
+      required:
+        - id
+        - slug
+        - hero
+      properties:
+        id:
+          type: string
+          example: "64a1234567890abcdef12345"
+        slug:
+          type: string
+          const: homepage
+          example: "homepage"
+        status:
+          type: string
+          enum: [draft, published]
+          example: "published"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-10-07T10:30:00Z"
+        hero:
+          type: object
+          required:
+            - title
+            - subtitle
+          properties:
+            title:
+              type: string
+              maxLength: 100
+              example: "Find a Better Temple"
+            subtitle:
+              type: string
+              maxLength: 250
+              example: "The Hindu Compliance Bureau helps you find temples you can trust."
+            background_image:
+              $ref: '#/components/schemas/MediaReference'
+            search_placeholder:
+              type: string
+              example: "Find temples, category"
+            cta_buttons:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                  href:
+                    type: string
+                    format: uri
+                  variant:
+                    type: string
+                    enum: [primary, secondary]
+        secondary_section:
+          type: object
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+            features:
+              type: array
+              items:
+                type: object
+                properties:
+                  icon:
+                    $ref: '#/components/schemas/MediaReference'
+                  title:
+                    type: string
+                  description:
+                    type: string
+        featured_content:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              minItems: 3
+              maxItems: 9
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  excerpt:
+                    type: string
+                  image:
+                    $ref: '#/components/schemas/MediaReference'
+                  link:
+                    type: string
+                    format: uri
+                  category:
+                    type: string
+        fourth_section:
+          type: object
+          properties:
+            part1:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                image:
+                  $ref: '#/components/schemas/MediaReference'
+            part2:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                image:
+                  $ref: '#/components/schemas/MediaReference'
+        business_services:
+          type: object
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+            services:
+              type: array
+              items:
+                type: object
+                properties:
+                  icon:
+                    $ref: '#/components/schemas/MediaReference'
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  cta_label:
+                    type: string
+                  cta_link:
+                    type: string
+                    format: uri
+        testimonials:
+          type: object
+          properties:
+            title:
+              type: string
+            items:
+              type: array
+              minItems: 3
+              maxItems: 12
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  content:
+                    type: string
+                  author_name:
+                    type: string
+                  author_title:
+                    type: string
+                  author_temple:
+                    type: string
+                  author_image:
+                    $ref: '#/components/schemas/MediaReference'
+                  rating:
+                    type: integer
+                    minimum: 1
+                    maximum: 5
+
+    NavigationMenu:
+      type: object
+      required:
+        - id
+        - slug
+        - items
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+          enum: [main-menu, footer-menu]
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - label
+              - href
+              - order
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              href:
+                type: string
+              icon:
+                $ref: '#/components/schemas/MediaReference'
+              order:
+                type: integer
+              parent_id:
+                type: string
+                nullable: true
+              requires_auth:
+                type: boolean
+                default: false
+              mega_menu:
+                type: object
+                nullable: true
+                properties:
+                  enabled:
+                    type: boolean
+                  columns:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        links:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              label:
+                                type: string
+                              href:
+                                type: string
+                              description:
+                                type: string
+
+    SiteSettings:
+      type: object
+      required:
+        - site_name
+        - logo
+      properties:
+        site_name:
+          type: string
+          example: "Hindu Compliance Bureau"
+        logo:
+          $ref: '#/components/schemas/MediaReference'
+        logo_alt:
+          $ref: '#/components/schemas/MediaReference'
+        favicon:
+          $ref: '#/components/schemas/MediaReference'
+        contact:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+            address:
+              type: string
+        social_media:
+          type: object
+          properties:
+            facebook:
+              type: string
+              format: uri
+            twitter:
+              type: string
+              format: uri
+            linkedin:
+              type: string
+              format: uri
+            instagram:
+              type: string
+              format: uri
+        footer:
+          type: object
+          properties:
+            copyright_text:
+              type: string
+            legal_links:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                  href:
+                    type: string
+            description:
+              type: string
+        auth:
+          type: object
+          properties:
+            nandi_sso_enabled:
+              type: boolean
+              default: true
+            login_required_message:
+              type: string
+            redirect_after_login:
+              type: string
+              default: "/dashboard"
+        seo:
+          type: object
+          properties:
+            default_title:
+              type: string
+            default_description:
+              type: string
+            default_og_image:
+              $ref: '#/components/schemas/MediaReference'
+
+    Media:
+      type: object
+      required:
+        - id
+        - filename
+        - mimeType
+        - filesize
+        - url
+      properties:
+        id:
+          type: string
+          example: "64a1234567890abcdef12345"
+        filename:
+          type: string
+          example: "hero-background.jpg"
+        mimeType:
+          type: string
+          example: "image/jpeg"
+        filesize:
+          type: integer
+          description: File size in bytes
+          example: 2048576
+        width:
+          type: integer
+          nullable: true
+          example: 1920
+        height:
+          type: integer
+          nullable: true
+          example: 1080
+        url:
+          type: string
+          format: uri
+          example: "https://cms.example.com/media/hero-background.jpg"
+        thumbnailURL:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://cms.example.com/media/hero-background-thumb.jpg"
+        alt:
+          type: string
+          nullable: true
+          example: "Temple sunset background"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MediaReference:
+      oneOf:
+        - type: string
+          description: Media ID reference
+        - $ref: '#/components/schemas/Media'
+      description: Can be either a media ID string or full media object (depending on Payload depth parameter)
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Not Found"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              message:
+                type: string
+              field:
+                type: string
+
+# Frontend Integration Notes:
+
+# 1. Authentication:
+#    - Public endpoints: No auth required
+#    - Draft content: Requires Bearer token in Authorization header
+#    - API Key: Set PAYLOAD_API_KEY environment variable
+
+# 2. Next.js Integration:
+#    // Server Component (ISR)
+#    export const revalidate = 3600 // 1 hour
+#
+#    async function getHomepage() {
+#      const res = await fetch(`${process.env.PAYLOAD_API_URL}/api/pages/homepage`)
+#      return res.json()
+#    }
+
+# 3. Image Optimization:
+#    // next.config.js
+#    images: {
+#      remotePatterns: [
+#        {
+#          protocol: 'https',
+#          hostname: 'cms.example.com',
+#        },
+#      ],
+#    }
+#
+#    // Component
+#    <Image src={media.url} alt={media.alt} width={media.width} height={media.height} />
+
+# 4. Content Caching:
+#    - ISR: Revalidate every 1 hour for static content
+#    - Client-side: Use React Query with 5-minute stale time
+#    - Webhook: Payload can trigger revalidation via Next.js API route
+
+# Environment Variables Required:
+# - PAYLOAD_API_URL: Base URL of Payload CMS instance
+# - PAYLOAD_API_KEY: API key for authenticated requests (optional for public content)
